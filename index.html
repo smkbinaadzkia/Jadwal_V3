@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Papan Jadwal Pelajaran — SMK IT Bina Adzkia (TJKT)</title>
+<title>Jadwal Pelajaran — SMK IT Bina Adzkia (TJKT)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
 <style>
@@ -76,7 +76,7 @@
   }
 
   .schedule-panel{
-    flex:1.55; display:flex; flex-direction:column; min-height:0;
+    flex:1.55; min-width:0; display:flex; flex-direction:column; min-height:0;
     background:rgba(15,32,68,0.55);
     border:1px solid var(--navy-line);
     border-radius:18px;
@@ -135,7 +135,7 @@
   .row.active .mapel{ color:#fff; }
 
   /* ---------- SIDE PANEL ---------- */
-  .now-panel{ flex:1; display:flex; flex-direction:column; gap:1.4vh; min-height:0; }
+  .now-panel{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1.4vh; min-height:0; }
 
   .now-card{
     flex:1.35; min-height:0; overflow:hidden;
@@ -184,6 +184,66 @@
     color:var(--gold); font-variant-numeric:tabular-nums; margin-top:0.2vh;
   }
 
+  /* ---------- INFO BAR: WAKTU SHOLAT + PENGINGAT KALDIK ---------- */
+  .info-bar{
+    display:flex; gap:1.4vw;
+  }
+  .prayer-card{
+    flex:1.55; min-width:0; display:flex; align-items:center; justify-content:space-between;
+    background:rgba(15,32,68,0.55);
+    border:1px solid var(--navy-line);
+    border-radius:16px;
+    padding:0.9vh 1.4vw;
+    gap:0.6vw;
+  }
+  .prayer-title{
+    display:flex; flex-direction:column; align-items:flex-start; gap:0.2vh;
+    padding-right:1vw; border-right:1px solid var(--navy-line);
+    flex-shrink:0;
+  }
+  .prayer-title .ic{ font-size:2.2vh; line-height:1; }
+  .prayer-title .lbl{
+    font-family:"Outfit",sans-serif; font-weight:700; font-size:1.05vh;
+    letter-spacing:0.08em; color:var(--cyan); white-space:nowrap;
+  }
+  .prayer-list{ display:flex; flex:1; min-width:0; justify-content:space-between; }
+  .prayer-item{
+    display:flex; flex-direction:column; align-items:center; gap:0.3vh;
+    padding:0.5vh 0.8vw; border-radius:10px; transition:background .3s ease;
+  }
+  .prayer-item .pname{
+    font-family:"Outfit",sans-serif; font-weight:600; font-size:1.15vh;
+    letter-spacing:0.05em; color:var(--muted);
+  }
+  .prayer-item .ptime{
+    font-family:"Outfit",sans-serif; font-weight:700; font-size:1.75vh;
+    color:var(--paper); font-variant-numeric:tabular-nums;
+  }
+  .prayer-item.active{ background:rgba(224,181,104,0.20); box-shadow: inset 0 0 0 1px var(--gold); }
+  .prayer-item.active .pname{ color:var(--gold); }
+  .prayer-item.active .ptime{ color:var(--gold); }
+  .prayer-item.next .pname{ color:var(--cyan); }
+  .prayer-item.next .ptime{ color:#fff; }
+
+  .kaldik-card{
+    flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; gap:0.3vh;
+    background:linear-gradient(120deg, var(--navy), var(--navy-mid));
+    border:1px solid var(--gold-dim);
+    border-radius:16px;
+    padding:0.9vh 1.4vw;
+  }
+  .kaldik-card.urgent{ border:1px solid var(--danger); }
+  .kaldik-label{
+    font-family:"Outfit",sans-serif; font-weight:700; font-size:1.05vh;
+    letter-spacing:0.1em; color:var(--gold);
+  }
+  .kaldik-card.urgent .kaldik-label{ color:var(--danger); }
+  .kaldik-text{
+    font-size:1.42vh; font-weight:600; color:var(--paper); line-height:1.25;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .kaldik-sub{ font-size:1.15vh; color:var(--muted); margin-top:0.1vh; }
+
   /* ---------- FOOTER ---------- */
   .ticker{
     padding:1vh 2vw; text-align:center;
@@ -223,6 +283,21 @@
         <div class="dateline" id="dateline">Memuat tanggal…</div>
       </div>
     </header>
+
+    <section class="info-bar">
+      <div class="prayer-card">
+        <div class="prayer-title">
+          <span class="ic">🕌</span>
+          <span class="lbl">WAKTU SHOLAT<br>DEPOK</span>
+        </div>
+        <div class="prayer-list" id="prayerList"></div>
+      </div>
+      <div class="kaldik-card" id="kaldikCard">
+        <div class="kaldik-label">KALENDER PENDIDIKAN</div>
+        <div class="kaldik-text" id="kaldikText">Memuat data kaldik…</div>
+        <div class="kaldik-sub" id="kaldikSub"></div>
+      </div>
+    </section>
 
     <main class="content" id="mainContent">
       <section class="schedule-panel">
@@ -381,6 +456,229 @@ const SCHEDULE = {
 const HARI_ID = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
 const BULAN_ID = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 
+/* ================= KALENDER PENDIDIKAN (KALDIK) 2026/2027 ================= */
+/* Sumber: KALDIK SMK IT Bina Adzkia T.P. 2026/2027 (mengacu KALDIK Provinsi Jawa Barat) */
+// kategori: "libur" & "liburSemester" = sekolah diliburkan (menimpa jadwal harian)
+//           "asesmen" | "pkl" | "kegiatan" = kegiatan berjalan seperti biasa, hanya pengingat
+const KALDIK_EVENTS = [
+  {s:"2026-07-10", e:"2026-07-10", c:"kegiatan", l:"Penyelarasan Kurikulum SMK dengan SKKNI Kemnaker"},
+  {s:"2026-07-11", e:"2026-07-11", c:"kegiatan", l:"Sosialisasi Program Sekolah dengan Wali Murid"},
+  {s:"2026-07-13", e:"2026-07-13", c:"kegiatan", l:"Hari Pertama Masuk Sekolah T.A. 2026/2027"},
+  {s:"2026-07-13", e:"2026-07-15", c:"kegiatan", l:"Masa Pengenalan Lingkungan Sekolah (MPLS)"},
+  {s:"2026-07-20", e:"2026-07-20", c:"kegiatan", l:"CSDT (Character Strengthening Discipline Training)"},
+  {s:"2026-07-31", e:"2026-07-31", c:"kegiatan", l:"Pembekalan Praktik Kerja Lapangan (PKL)"},
+  {s:"2026-08-03", e:"2026-08-03", c:"pkl", l:"Keberangkatan PKL Gelombang 1"},
+  {s:"2026-08-03", e:"2026-08-31", c:"kegiatan", l:"Pelaksanaan Survei Lingkungan Belajar (Sulingjar)"},
+  {s:"2026-08-03", e:"2026-11-28", c:"pkl", l:"Pelaksanaan PKL di Dunia Usaha/Industri (DU/DI)"},
+  {s:"2026-08-17", e:"2026-08-17", c:"libur", l:"Libur HUT Kemerdekaan RI ke-81"},
+  {s:"2026-08-20", e:"2026-08-20", c:"kegiatan", l:"In House Training (IHT) Lintas Mata Pelajaran"},
+  {s:"2026-08-20", e:"2026-08-22", c:"kegiatan", l:"Military Camp CSDT"},
+  {s:"2026-08-25", e:"2026-08-25", c:"libur", l:"Libur Maulid Nabi Muhammad SAW"},
+  {s:"2026-08-26", e:"2026-08-26", c:"kegiatan", l:"Sidang Corp CSDT"},
+  {s:"2026-09-05", e:"2026-09-05", c:"kegiatan", l:"Ikhtifal (Penutupan Kegiatan CSDT)"},
+  {s:"2026-09-28", e:"2026-10-05", c:"asesmen", l:"Perkiraan Asesmen Sumatif Tengah Semester 1"},
+  {s:"2026-10-07", e:"2026-10-08", c:"kegiatan", l:"Sosialisasi Kesmen, Kebakaran & Lalu Lintas"},
+  {s:"2026-10-09", e:"2026-10-10", c:"kegiatan", l:"LDKS OSIS Kelas X"},
+  {s:"2026-10-17", e:"2026-10-17", c:"kegiatan", l:"Pembagian Hasil Asesmen Sumatif Tengah Semester 1"},
+  {s:"2026-10-19", e:"2026-10-29", c:"kegiatan", l:"Supervisi Akademik"},
+  {s:"2026-10-20", e:"2026-10-20", c:"kegiatan", l:"Upacara Peringatan Hari Santri Nasional"},
+  {s:"2026-10-26", e:"2026-11-08", c:"asesmen", l:"Pelaksanaan Tes Kemampuan Akademik (TKA)"},
+  {s:"2026-11-10", e:"2026-11-10", c:"kegiatan", l:"Upacara Peringatan Hari Pahlawan"},
+  {s:"2026-11-25", e:"2026-11-25", c:"kegiatan", l:"Peringatan Hari Guru Nasional"},
+  {s:"2026-11-26", e:"2026-11-27", c:"kegiatan", l:"Debat & Pemilihan Umum (Pemilu) OSIS"},
+  {s:"2026-11-27", e:"2026-11-27", c:"pkl", l:"Penjemputan PKL Gelombang 1"},
+  {s:"2026-11-30", e:"2026-12-11", c:"asesmen", l:"Perkiraan Asesmen Sumatif Akhir Semester 1"},
+  {s:"2026-12-14", e:"2026-12-14", c:"kegiatan", l:"Kelas Inspirasi"},
+  {s:"2026-12-15", e:"2026-12-15", c:"kegiatan", l:"Binadz Field Observation Local Enterprises"},
+  {s:"2026-12-19", e:"2026-12-19", c:"kegiatan", l:"Parenting & Pembagian Rapor Asesmen Sumatif Akhir Semester"},
+  {s:"2026-12-20", e:"2026-12-20", c:"kegiatan", l:"Family Gathering Yayasan Nurul Amin"},
+  {s:"2026-12-23", e:"2026-12-23", c:"kegiatan", l:"Penetapan & Pembagian Rapor Semester 1"},
+  {s:"2026-12-24", e:"2026-12-24", c:"libur", l:"Cuti Bersama Hari Raya Natal"},
+  {s:"2026-12-25", e:"2026-12-25", c:"libur", l:"Libur Hari Raya Natal"},
+  {s:"2026-12-28", e:"2027-01-08", c:"liburSemester", l:"Libur Semester 1"},
+  {s:"2027-01-01", e:"2027-01-01", c:"libur", l:"Libur Tahun Baru Masehi 2027"},
+  {s:"2027-01-05", e:"2027-01-05", c:"libur", l:"Perkiraan Libur Isra Mi'raj"},
+  {s:"2027-01-11", e:"2027-01-11", c:"kegiatan", l:"Hari Pertama Masuk Sekolah Semester 2"},
+  {s:"2027-01-28", e:"2027-01-28", c:"kegiatan", l:"Pengujian Laporan Sidang PKL"},
+  {s:"2027-02-06", e:"2027-02-06", c:"libur", l:"Perkiraan Libur Tahun Baru Imlek"},
+  {s:"2027-02-08", e:"2027-02-12", c:"libur", l:"Perkiraan Libur Awal Ramadan 1448 H"},
+  {s:"2027-02-15", e:"2027-03-05", c:"kegiatan", l:"Penumbuhan Budi Pekerti / Pesantren Ramadhan"},
+  {s:"2027-03-08", e:"2027-03-19", c:"libur", l:"Perkiraan Libur Hari Raya Idul Fitri 1448 H"},
+  {s:"2027-03-09", e:"2027-03-09", c:"libur", l:"Perkiraan Libur Hari Raya Nyepi"},
+  {s:"2027-03-25", e:"2027-03-31", c:"asesmen", l:"ASTS 2 (X & XI) dan PSAJ (XII)"},
+  {s:"2027-03-29", e:"2027-04-30", c:"asesmen", l:"Uji Kompetensi Keahlian (UKK) & Sertifikasi Industri"},
+  {s:"2027-04-01", e:"2027-04-08", c:"kegiatan", l:"Pengayaan Uji Kompetensi Keahlian (UKK)"},
+  {s:"2027-04-09", e:"2027-04-09", c:"kegiatan", l:"Pra Uji Kompetensi Keahlian (Pra UKK)"},
+  {s:"2027-04-10", e:"2027-04-10", c:"kegiatan", l:"Pembagian Rapor Asesmen Sumatif Tengah Semester 2"},
+  {s:"2027-04-21", e:"2027-04-21", c:"kegiatan", l:"Peringatan Hari Kartini"},
+  {s:"2027-04-26", e:"2027-04-26", c:"libur", l:"Perkiraan Libur Wafat Isa Almasih"},
+  {s:"2027-05-01", e:"2027-05-01", c:"libur", l:"Libur Hari Buruh Internasional"},
+  {s:"2027-05-02", e:"2027-05-02", c:"kegiatan", l:"Peringatan Hari Pendidikan Nasional"},
+  {s:"2027-05-03", e:"2027-05-03", c:"kegiatan", l:"Perkiraan Penetapan Kelulusan SMK"},
+  {s:"2027-05-26", e:"2027-05-26", c:"libur", l:"Perkiraan Libur Hari Raya Waisak 2571"},
+  {s:"2027-05-27", e:"2027-05-27", c:"libur", l:"Perkiraan Libur Hari Raya Idul Adha 1448 H"},
+  {s:"2027-06-01", e:"2027-06-01", c:"libur", l:"Libur Hari Lahir Pancasila"},
+  {s:"2027-06-03", e:"2027-06-11", c:"asesmen", l:"Perkiraan Asesmen Sumatif Akhir Tahun / Akhir Fase"},
+  {s:"2027-06-21", e:"2027-06-21", c:"kegiatan", l:"Rapat Kenaikan Kelas"},
+  {s:"2027-06-23", e:"2027-06-23", c:"kegiatan", l:"Pembagian Rapor Semester 2"},
+  {s:"2027-06-25", e:"2027-06-25", c:"kegiatan", l:"Penetapan Rapor Semester 2"},
+  {s:"2027-06-28", e:"2027-07-09", c:"liburSemester", l:"Libur Akhir Tahun Ajaran 2026/2027"}
+];
+const KALDIK_ICON = {libur:"🎌", liburSemester:"🏖️", asesmen:"📝", pkl:"🏭", kegiatan:"📌"};
+
+function toDateOnly(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+function parseISO(s){ const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d); }
+function dateStr(d){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+function findOngoingKaldik(today, categories){
+  const t = toDateOnly(today).getTime();
+  return KALDIK_EVENTS.filter(ev => categories.includes(ev.c) && t>=parseISO(ev.s).getTime() && t<=parseISO(ev.e).getTime());
+}
+function findNextKaldik(today){
+  const t = toDateOnly(today).getTime();
+  const upcoming = KALDIK_EVENTS.filter(ev => parseISO(ev.s).getTime() > t);
+  upcoming.sort((a,b)=>parseISO(a.s)-parseISO(b.s));
+  return upcoming[0] || null;
+}
+function fmtTanggalPendek(d){
+  return `${d.getDate()} ${BULAN_ID[d.getMonth()].slice(0,3)}`;
+}
+
+/* ================= WAKTU SHOLAT (Metode Kemenag RI: Subuh 20°, Isya 18°, ihtiyat +2 menit) ================= */
+/* Titik acuan: Depok, Jawa Barat (-6.4025, 106.7942), WIB (UTC+7) — berlaku sepanjang tahun ajaran */
+const PRAY_LAT = -6.4025, PRAY_LON = 106.7942, PRAY_TZ = 7;
+function fixAngle(a){ a = a - 360*Math.floor(a/360); return a<0? a+360 : a; }
+function fixHour(a){ a = a - 24*Math.floor(a/24); return a<0? a+24 : a; }
+function julianDate(y,m,d){
+  if(m<=2){ y-=1; m+=12; }
+  const A = Math.floor(y/100), B = 2-A+Math.floor(A/4);
+  return Math.floor(365.25*(y+4716))+Math.floor(30.6001*(m+1))+d+B-1524.5;
+}
+function sunPosition(jd){
+  const D = jd - 2451545.0;
+  const g = fixAngle(357.529 + 0.98560028*D) * Math.PI/180;
+  const q = fixAngle(280.459 + 0.98564736*D);
+  const L = fixAngle(q + 1.915*Math.sin(g) + 0.020*Math.sin(2*g)) * Math.PI/180;
+  const e = (23.439 - 0.00000036*D) * Math.PI/180;
+  let RA = (Math.atan2(Math.cos(e)*Math.sin(L), Math.cos(L)) * 180/Math.PI) / 15;
+  RA = fixHour(RA);
+  const eqt = q/15 - RA;
+  const decl = Math.asin(Math.sin(e)*Math.sin(L));
+  return {decl, eqt};
+}
+function sunTimeDiff(angleDeg, decl, latDeg){
+  const lat = latDeg*Math.PI/180, ang = angleDeg*Math.PI/180;
+  let cosH = (-Math.sin(ang) - Math.sin(lat)*Math.sin(decl)) / (Math.cos(lat)*Math.cos(decl));
+  cosH = Math.max(-1, Math.min(1, cosH));
+  return (Math.acos(cosH) * 180/Math.PI) / 15;
+}
+function asrTimeDiff(decl, latDeg){
+  const latR = latDeg*Math.PI/180;
+  const angle = -(Math.atan(1/(1+Math.tan(Math.abs(latR-decl)))) * 180/Math.PI);
+  return sunTimeDiff(angle, decl, latDeg);
+}
+function fmtJam(t){
+  t = fixHour(t);
+  let h = Math.floor(t), mi = Math.round((t-h)*60);
+  if(mi===60){ h+=1; mi=0; }
+  if(h===24) h=0;
+  return `${String(h).padStart(2,"0")}.${String(mi).padStart(2,"0")}`;
+}
+function hitungWaktuSholat(y,m,d){
+  const jd0 = julianDate(y,m,d) - PRAY_LON/(15*24);
+  const {decl, eqt} = sunPosition(jd0);
+  const dhuhr = 12 + PRAY_TZ - PRAY_LON/15 - eqt;
+  const fajr = dhuhr - sunTimeDiff(20, decl, PRAY_LAT);
+  const asr = dhuhr + asrTimeDiff(decl, PRAY_LAT);
+  const maghrib = dhuhr + sunTimeDiff(0.833, decl, PRAY_LAT);
+  const isha = dhuhr + sunTimeDiff(18, decl, PRAY_LAT);
+  const imsak = fajr - 10/60;
+  return [
+    {key:"imsak", nama:"Imsak", jam:fmtJam(imsak)},
+    {key:"subuh", nama:"Subuh", jam:fmtJam(fajr+2/60)},
+    {key:"dzuhur", nama:"Dzuhur", jam:fmtJam(dhuhr+2/60)},
+    {key:"ashar", nama:"Ashar", jam:fmtJam(asr+2/60)},
+    {key:"maghrib", nama:"Maghrib", jam:fmtJam(maghrib+2/60)},
+    {key:"isya", nama:"Isya", jam:fmtJam(isha+2/60)}
+  ];
+}
+function jamToMinutes(jam){
+  const [h,m] = jam.split(".").map(Number);
+  return h*60+m;
+}
+
+let prayerCacheDate = null, prayerCacheList = null;
+function getWaktuSholatHariIni(now){
+  const ds = dateStr(now);
+  if(prayerCacheDate !== ds){
+    prayerCacheList = hitungWaktuSholat(now.getFullYear(), now.getMonth()+1, now.getDate());
+    prayerCacheDate = ds;
+  }
+  return prayerCacheList;
+}
+function renderPrayerBar(now){
+  const list = getWaktuSholatHariIni(now);
+  const nowMin = now.getHours()*60 + now.getMinutes();
+  let activeIdx = -1;
+  for(let i=0;i<list.length;i++){
+    const start = jamToMinutes(list[i].jam);
+    const end = (i+1<list.length) ? jamToMinutes(list[i+1].jam) : 24*60;
+    if(nowMin>=start && nowMin<end) activeIdx = i;
+  }
+  const nextIdx = (activeIdx+1) % list.length;
+  const el = document.getElementById("prayerList");
+  if(!el) return;
+  el.innerHTML = list.map((p,i)=>{
+    let cls = "prayer-item";
+    if(i===activeIdx) cls += " active";
+    else if(i===nextIdx) cls += " next";
+    return `<div class="${cls}"><div class="pname">${p.nama}</div><div class="ptime">${p.jam}</div></div>`;
+  }).join("");
+}
+
+let kaldikCacheDate = null;
+function renderKaldikBar(now){
+  const ds = dateStr(now);
+  if(kaldikCacheDate === ds) return;
+  kaldikCacheDate = ds;
+  const card = document.getElementById("kaldikCard");
+  const textEl = document.getElementById("kaldikText");
+  const subEl = document.getElementById("kaldikSub");
+  if(!card || !textEl || !subEl) return;
+
+  const ongoingSpecial = findOngoingKaldik(now, ["asesmen","pkl","kegiatan"]);
+  const ongoingLibur = findOngoingKaldik(now, ["libur","liburSemester"]);
+  card.classList.remove("urgent");
+
+  if(ongoingLibur.length>0){
+    const ev = ongoingLibur[0];
+    textEl.textContent = `${KALDIK_ICON[ev.c]} ${ev.l}`;
+    subEl.textContent = "Sedang berlangsung — sekolah diliburkan";
+    return;
+  }
+  if(ongoingSpecial.length>0){
+    const ev = ongoingSpecial[0];
+    card.classList.add("urgent");
+    textEl.textContent = `${KALDIK_ICON[ev.c]} ${ev.l}`;
+    subEl.textContent = `Berlangsung s.d. ${fmtTanggalPendek(parseISO(ev.e))}`;
+    return;
+  }
+  const next = findNextKaldik(now);
+  if(next){
+    const hari = Math.ceil((parseISO(next.s) - toDateOnly(now)) / 86400000);
+    textEl.textContent = `${KALDIK_ICON[next.c]} ${next.l}`;
+    subEl.textContent = `Mulai ${fmtTanggalPendek(parseISO(next.s))} (H-${hari})`;
+  } else {
+    textEl.textContent = "Tidak ada agenda kaldik lebih lanjut";
+    subEl.textContent = "";
+  }
+}
+function checkLiburHariIni(now){
+  const found = findOngoingKaldik(now, ["libur","liburSemester"]);
+  return found.length>0 ? found[0] : null;
+}
+
 function toMinutes(str){
   const [h,m] = str.split(".").map(Number);
   return h*60+m;
@@ -528,6 +826,20 @@ function tick(){
   if(dateEl) dateEl.textContent = dateStr;
 
   const ticker = document.getElementById("ticker");
+
+  renderPrayerBar(now);
+  renderKaldikBar(now);
+
+  const liburHariIni = checkLiburHariIni(now);
+  if(liburHariIni){
+    const stateKey = "libur-"+liburHariIni.s+liburHariIni.e;
+    if(currentDayRendered !== stateKey){
+      renderStateScreen("🎌", "Sekolah Diliburkan", `${liburHariIni.l}, sesuai Kalender Pendidikan SMK IT Bina Adzkia T.P. 2026/2027. Kegiatan belajar mengajar akan kembali pada hari efektif berikutnya.`, true);
+      if(ticker) ticker.textContent = "LIBUR SESUAI KALDIK • SAMPAI JUMPA PADA HARI EFEKTIF BERIKUTNYA";
+      currentDayRendered = stateKey;
+    }
+    return;
+  }
 
   if(!SCHEDULE[dayName]){
     // Sabtu / Minggu
